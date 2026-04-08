@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>كوتشينة الأوامر - النسخة المحدثة</title>
+    <title>كوتشينة الأوامر - غرف خاصة</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     
@@ -11,11 +11,14 @@
         :root { --bg-color: #1a0f1a; --card-back: #4a0e0e; --accent: #ffd700; }
         body { background-color: var(--bg-color); margin: 0; padding: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; user-select: none; -webkit-user-select: none; font-family: sans-serif; color: white; overflow-x: hidden; }
         
-        #setup-screen { position: fixed; inset: 0; background: var(--bg-color); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+        /* شاشة الدخول */
+        #setup-screen { position: fixed; inset: 0; background: var(--bg-color); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; text-align: center; }
+        .room-input { padding: 15px; border-radius: 10px; border: 2px solid #4a0e0e; background: #2d1b2d; color: white; font-size: 1.1rem; width: 250px; text-align: center; margin-bottom: 10px; }
+        
         .controls { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 15px; position: sticky; top: 0; z-index: 2000; background: rgba(26, 15, 26, 0.95); padding: 10px 0; border-bottom: 1px solid #333; }
         
         .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
-        .btn-player { background: #008cff; font-size: 1.2rem; width: 220px; box-shadow: 0 4px #005fa3; }
+        .btn-player { background: #008cff; font-size: 1.1rem; width: 250px; box-shadow: 0 4px #005fa3; margin: 5px; }
         .btn-reset { background: #ff4444; box-shadow: 0 4px #b32d2d; }
         .mode-online { background: #008cff; box-shadow: 0 4px #005fa3; }
         .mode-offline { background: #ff00ea; box-shadow: 0 4px #a30095; }
@@ -42,12 +45,14 @@
 <body>
 
 <div id="setup-screen">
-    <h2 style="margin-bottom:30px">اختر دورك للبدء:</h2>
-    <button class="btn btn-player" onclick="choosePlayer(1)">أنا اللاعب 1</button>
-    <button class="btn btn-player" style="background: #ff00ea; box-shadow: 0 4px #a30095;" onclick="choosePlayer(2)">أنا اللاعب 2</button>
+    <h2 style="color:var(--accent)">كوتشينة الأوامر</h2>
+    <input type="text" id="room-id" class="room-input" placeholder="أدخل كود الغرفة">
+    <button class="btn btn-player" onclick="joinRoom(1)">أنا اللاعب 1 (إنشاء)</button>
+    <button class="btn btn-player" style="background: #ff00ea; box-shadow: 0 4px #a30095;" onclick="joinRoom(2)">أنا اللاعب 2 (انضمام)</button>
+    <p style="font-size: 12px; color: #777;">شارك الكود مع الطرف الآخر للعب معاً</p>
 </div>
 
-<div class="player-indicator" id="p-label">بانتظار الاختيار...</div>
+<div class="player-indicator" id="p-label">بانتظار الدخول...</div>
 
 <div class="controls">
     <div id="battle-status" style="color: var(--accent); font-size: 14px; font-weight: bold; min-height: 20px;"></div>
@@ -68,7 +73,7 @@
 </div>
 
 <script>
-    // تكوين Firebase (استخدم بياناتك الخاصة هنا)
+    // تكوين Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyAvUWVPzOphulv9Ejh-dWPdxQKijAkJH_w",
         authDomain: "cardsgame-cf381.firebaseapp.com",
@@ -81,20 +86,66 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const gameRef = db.ref('sharedGame');
-
+    let gameRef = null;
     let myPlayerNum = null;
     let currentMode = 'online';
     const valuesOrder = {'A':14, 'K':13, 'Q':12, 'J':11, '10':10, '9':9, '8':8, '7':7, '6':6, '5':5, '4':4, '3':3, '2':2};
 
-    function choosePlayer(num) {
-        myPlayerNum = num;
-        document.getElementById('p-label').innerText = "الدور: لاعب " + num;
-        document.getElementById('setup-screen').style.display = 'none';
-    }
-
     const offlineActions = [{t:'مص / لحس', i:'👅'}, {t:'حضن', i:'🫂'}, {t:'شد شعر', i:'💇‍♀️'}, {t:'مساج', i:'💆‍♂️'}, {t:'مداعبة', i:'✨'}, {t:'قبلات خفيفة', i:'💋'}, {t:'البسي الذيل', i:'🦊'}, {t:'مص زبه', i:'🍌'}, {t:'الحس كسها', i:'🍑'}, {t:'اضرب مكوتها', i:'🖐️'}, {t:'العب في كسها', i:'👉'}, {t:'مص صدرها', i:'🍒'}, {t:'العبي في كسك', i:'🔥'}, {t:'امسكي زبه', i:'✊'}, {t:'بوس اذنها', i:'👂'}, {t:'انزع قطعة ملابس', i:'👕'}, {t:'حكم', i:'⚖️'}, {t:'اترجيه يلحس كسك', i:'🥺'}, {t:'اترجاها تمص زبك', i:'🙏'}, {t:'حاولي تقاوميه', i:'🛡️'}, {t:'حاول تغتصبها', i:'👺'}, {t:'مرر يدك بلطف', i:'🖐️'}, {t:'داعب عضوه بلطف', i:'🌸'}, {t:'داعب عضوها بلسانك', i:'🍭'}];
     const onlineActions = [{t:'سوي حركة مثيرة', i:'💃'}, {t:'انزعي قطعة ملابس', i:'👙'}, {t:'المسي صدرك', i:'🍒'}, {t:'قول فكرة جنسية', i:'💭'}, {t:'ارسل مقطع جنسي', i:'🎬'}, {t:'خدي وضعية جنسية', i:'🛌'}, {t:'داعبي كسك', i:'🔥'}, {t:'البسي الذيل', i:'🦊'}, {t:'كلام سكسي', i:'👄'}, {t:'اظهر زبك / اظهري كسك', i:'🔞'}, {t:'طقي مكوتك', i:'🖐️'}, {t:'دخلي اصبع واحد', i:'☝️'}, {t:'دخلي اصبعين', i:'✌️'}, {t:'امسك زبك بقوة', i:'✊'}, {t:'اتلبوني على الآخر', i:'⚤'}];
+
+    function joinRoom(num) {
+        const roomId = document.getElementById('room-id').value.trim();
+        if (!roomId) {
+            alert("يرجى إدخال كود الغرفة أولاً!");
+            return;
+        }
+        myPlayerNum = num;
+        gameRef = db.ref('rooms/' + roomId);
+        
+        document.getElementById('p-label').innerText = "الغرفة: " + roomId + " | لاعب " + num;
+        document.getElementById('setup-screen').style.display = 'none';
+        
+        initGame();
+    }
+
+    function initGame() {
+        gameRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (!data) {
+                if(myPlayerNum === 1) createSharedDeck('online');
+                return;
+            }
+            
+            currentMode = data.mode || 'online';
+            const modeBtn = document.getElementById('modeBtn');
+            modeBtn.innerText = currentMode === 'online' ? 'المود: أونلاين' : 'المود: أوفلاين';
+            modeBtn.className = `btn mode-${currentMode}`;
+
+            renderBoard(data.flippedIndices, data.deck);
+
+            const statusEl = document.getElementById('battle-status');
+            
+            if (data.p1Card && data.p2Card && !data.lastAction) {
+                let winnerTxt = "";
+                if (data.p1Card.weight > data.p2Card.weight) winnerTxt = "اللاعب 1 فاز!";
+                else if (data.p2Card.weight > data.p1Card.weight) winnerTxt = "اللاعب 2 فاز!";
+                else winnerTxt = "تعادل!";
+
+                gameRef.update({ lastAction: { type: 'battle', c1: data.p1Card, c2: data.p2Card, winnerName: winnerTxt } });
+            }
+
+            if (data.lastAction) {
+                showModal(data.lastAction);
+                statusEl.innerText = "";
+            } else {
+                document.getElementById('overlay').style.display = 'none';
+                if (data.p1Card && !data.p2Card) statusEl.innerText = "لاعب 1 اختار.. بانتظار لاعب 2";
+                else if (!data.p1Card && data.p2Card) statusEl.innerText = "لاعب 2 اختار.. بانتظار لاعب 1";
+                else statusEl.innerText = "اختر كرت للمواجهة أو كرت أمر";
+            }
+        });
+    }
 
     function toggleMode() {
         const next = (currentMode === 'online') ? 'offline' : 'online';
@@ -103,71 +154,21 @@
 
     function createSharedDeck(modeToSet = 'online') {
         let newDeck = [];
-        // إنشاء كروت الأرقام
         ['♠','♣','♥','♦'].forEach(s => {
             ['A','2','3','4','5','6','7','8','9','10','J','Q','K'].forEach(v => {
                 newDeck.push({type:'n', s, v, weight: valuesOrder[v]});
             });
         });
-        // إضافة الأوامر
         const acts = (modeToSet === 'online') ? onlineActions : offlineActions;
         [...acts, ...acts].forEach(a => newDeck.push({type:'a', t:a.t, i:a.i}));
         
-        // خلط الكروت
         for (let i = newDeck.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
         }
         
-        gameRef.set({ 
-            deck: newDeck, 
-            flippedIndices: {}, 
-            lastAction: null, 
-            p1Card: null, 
-            p2Card: null, 
-            mode: modeToSet 
-        });
+        gameRef.set({ deck: newDeck, flippedIndices: {}, lastAction: null, p1Card: null, p2Card: null, mode: modeToSet });
     }
-
-    gameRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (!data) return;
-        
-        currentMode = data.mode || 'online';
-        const modeBtn = document.getElementById('modeBtn');
-        modeBtn.innerText = currentMode === 'online' ? 'المود: أونلاين' : 'المود: أوفلاين';
-        modeBtn.className = `btn mode-${currentMode}`;
-
-        renderBoard(data.flippedIndices, data.deck);
-
-        const statusEl = document.getElementById('battle-status');
-        
-        // --- منطق المقارنة الرئيسي ---
-        if (data.p1Card && data.p2Card && !data.lastAction) {
-            let winnerTxt = "";
-            if (data.p1Card.weight > data.p2Card.weight) winnerTxt = "اللاعب 1 فاز!";
-            else if (data.p2Card.weight > data.p1Card.weight) winnerTxt = "اللاعب 2 فاز!";
-            else winnerTxt = "تعادل!";
-
-            const battleAction = { 
-                type: 'battle', 
-                c1: data.p1Card, 
-                c2: data.p2Card, 
-                winnerName: winnerTxt 
-            };
-            gameRef.update({ lastAction: battleAction });
-        }
-
-        if (data.lastAction) {
-            showModal(data.lastAction);
-            statusEl.innerText = "";
-        } else {
-            document.getElementById('overlay').style.display = 'none';
-            if (data.p1Card && !data.p2Card) statusEl.innerText = "لاعب 1 اختار.. بانتظار لاعب 2";
-            else if (!data.p1Card && data.p2Card) statusEl.innerText = "لاعب 2 اختار.. بانتظار لاعب 1";
-            else statusEl.innerText = "اختر كرت للمواجهة أو كرت أمر";
-        }
-    });
 
     function renderBoard(flippedIndices, deck) {
         const board = document.getElementById('board');
@@ -190,14 +191,11 @@
             
             div.onpointerdown = () => {
                 if (isFlipped || !myPlayerNum) return;
-                
                 gameRef.child('p' + myPlayerNum + 'Card').once('value', (s) => {
                     if (d.type === 'a') {
-                        // إذا كان كرت أمر، يظهر فوراً للجميع
                         gameRef.child('flippedIndices').child(index).set(true);
                         gameRef.update({ lastAction: { type: 'action', data: d } });
                     } else if (!s.val()) {
-                        // إذا كان كرت رقم، ينتظر اللاعب الآخر
                         gameRef.child('flippedIndices').child(index).set(true);
                         gameRef.child('p' + myPlayerNum + 'Card').set(d);
                     }
@@ -218,9 +216,7 @@
         } else {
             modalHeader.innerText = "نتيجة المواجهة";
             const cardHtml = (c) => `<div class="mini-card" style="color:${(c.s==='♥'||c.s==='♦')?'red':'black'}"><div>${c.v}</div><div>${c.s}</div></div>`;
-            
-            modalText.innerHTML = `
-                <div class="battle-container">
+            modalText.innerHTML = `<div class="battle-container">
                     <div>${cardHtml(obj.c1)}<div style="font-size:10px">لاعب 1</div></div>
                     <div style="font-weight:bold; color:red">VS</div>
                     <div>${cardHtml(obj.c2)}<div style="font-size:10px">لاعب 2</div></div>
@@ -231,11 +227,7 @@
     }
 
     function requestCloseModal() {
-        gameRef.update({
-            lastAction: null,
-            p1Card: null,
-            p2Card: null
-        });
+        gameRef.update({ lastAction: null, p1Card: null, p2Card: null });
     }
 
     function resetGame() {
