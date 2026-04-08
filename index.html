@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>كوتشينة الأوامر - نظام المزامنة الفائق</title>
+    <title>كوتشينة الأوامر - النسخة المحدثة</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     
@@ -28,12 +28,12 @@
         .card-back { background: var(--card-back); border: 2px solid #631111; box-shadow: inset 0 0 15px rgba(0,0,0,0.5); }
         .card-front { background: white; transform: rotateY(180deg); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #000; font-weight: bold; font-size: 1.2rem; }
         .action-card { background: linear-gradient(135deg, #6a0dad, #b026ff) !important; color: white !important; border: 2px solid var(--accent); }
+        .red { color: #ff4444 !important; }
 
         #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4000; justify-content: center; align-items: center; }
         .modal-content { width: 85%; max-width: 350px; background: white; border-radius: 25px; padding: 25px; color: #000; text-align: center; position: relative; }
         .battle-container { display: flex; gap: 15px; align-items: center; justify-content: center; margin: 20px 0; }
         .mini-card { width: 80px; height: 110px; border: 2px solid #ddd; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 22px; background: #fdfdfd; }
-        .winner-tag { border: 3px solid #4CAF50 !important; box-shadow: 0 0 15px rgba(76,175,80,0.6); transform: scale(1.1); }
         
         .close-btn { position: absolute; bottom: -80px; left: 50%; transform: translateX(-50%); background: #ff4444; color: white; width: 65px; height: 65px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 32px; cursor: pointer; border: 4px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .player-indicator { position: fixed; top: 12px; left: 12px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 6px; font-size: 12px; z-index: 2500; }
@@ -68,6 +68,7 @@
 </div>
 
 <script>
+    // تكوين Firebase (استخدم بياناتك الخاصة هنا)
     const firebaseConfig = {
         apiKey: "AIzaSyAvUWVPzOphulv9Ejh-dWPdxQKijAkJH_w",
         authDomain: "cardsgame-cf381.firebaseapp.com",
@@ -97,26 +98,37 @@
 
     function toggleMode() {
         const next = (currentMode === 'online') ? 'offline' : 'online';
-        if(confirm(`تغيير المود؟`)) createSharedDeck(next);
+        if(confirm(`تغيير المود إلى ${next}؟`)) createSharedDeck(next);
     }
 
     function createSharedDeck(modeToSet = 'online') {
         let newDeck = [];
+        // إنشاء كروت الأرقام
         ['♠','♣','♥','♦'].forEach(s => {
             ['A','2','3','4','5','6','7','8','9','10','J','Q','K'].forEach(v => {
                 newDeck.push({type:'n', s, v, weight: valuesOrder[v]});
             });
         });
+        // إضافة الأوامر
         const acts = (modeToSet === 'online') ? onlineActions : offlineActions;
-        [...acts, ...acts, ...acts].forEach(a => newDeck.push({type:'a', t:a.t, i:a.i}));
+        [...acts, ...acts].forEach(a => newDeck.push({type:'a', t:a.t, i:a.i}));
+        
+        // خلط الكروت
         for (let i = newDeck.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
         }
-        gameRef.set({ deck: newDeck, flippedIndices: {}, lastAction: null, p1Card: null, p2Card: null, mode: modeToSet });
+        
+        gameRef.set({ 
+            deck: newDeck, 
+            flippedIndices: {}, 
+            lastAction: null, 
+            p1Card: null, 
+            p2Card: null, 
+            mode: modeToSet 
+        });
     }
 
-    // الاستماع للتغييرات
     gameRef.on('value', (snapshot) => {
         const data = snapshot.val();
         if (!data) return;
@@ -130,15 +142,20 @@
 
         const statusEl = document.getElementById('battle-status');
         
-        // منطق التحقق من وجود كرتين للمقارنة
-        if (data.p1Card && data.p2Card) {
-            const winner = data.p1Card.weight >= data.p2Card.weight ? data.p1Card : data.p2Card;
-            const battleAction = { type: 'battle', c1: data.p1Card, c2: data.p2Card, winner };
-            
-            // تحديث السيرفر بالأكشن لفتحه عند الجميع
-            if (!data.lastAction || data.lastAction.type !== 'battle') {
-                gameRef.child('lastAction').set(battleAction);
-            }
+        // --- منطق المقارنة الرئيسي ---
+        if (data.p1Card && data.p2Card && !data.lastAction) {
+            let winnerTxt = "";
+            if (data.p1Card.weight > data.p2Card.weight) winnerTxt = "اللاعب 1 فاز!";
+            else if (data.p2Card.weight > data.p1Card.weight) winnerTxt = "اللاعب 2 فاز!";
+            else winnerTxt = "تعادل!";
+
+            const battleAction = { 
+                type: 'battle', 
+                c1: data.p1Card, 
+                c2: data.p2Card, 
+                winnerName: winnerTxt 
+            };
+            gameRef.update({ lastAction: battleAction });
         }
 
         if (data.lastAction) {
@@ -148,7 +165,7 @@
             document.getElementById('overlay').style.display = 'none';
             if (data.p1Card && !data.p2Card) statusEl.innerText = "لاعب 1 اختار.. بانتظار لاعب 2";
             else if (!data.p1Card && data.p2Card) statusEl.innerText = "لاعب 2 اختار.. بانتظار لاعب 1";
-            else statusEl.innerText = "";
+            else statusEl.innerText = "اختر كرت للمواجهة أو كرت أمر";
         }
     });
 
@@ -159,21 +176,28 @@
             const isFlipped = flippedIndices && flippedIndices[index];
             const div = document.createElement('div');
             div.className = 'card';
+            
+            let frontClass = "card-front ";
+            if (d.type === 'a') frontClass += "action-card";
+            else if (d.s === '♥' || d.s === '♦') frontClass += "red";
+
             div.innerHTML = `<div class="card-inner ${isFlipped?'flipped':''}">
                                 <div class="card-back"></div>
-                                <div class="card-front ${d.type==='n'&&(d.s==='♥'||d.s==='♦')?'red':''} ${d.type==='a'?'action-card':''}">
+                                <div class="${frontClass}">
                                     ${d.type==='n' ? `<div>${d.v}</div><div>${d.s}</div>` : `<div>${d.i}</div><div style="font-size:10px">${d.t}</div>`}
                                 </div>
                              </div>`;
+            
             div.onpointerdown = () => {
                 if (isFlipped || !myPlayerNum) return;
                 
-                // التأكد من أن اللاعب لم يفتح كرت أرقام مسبقاً في هذه الجولة
                 gameRef.child('p' + myPlayerNum + 'Card').once('value', (s) => {
                     if (d.type === 'a') {
+                        // إذا كان كرت أمر، يظهر فوراً للجميع
                         gameRef.child('flippedIndices').child(index).set(true);
-                        gameRef.child('lastAction').set({ type: 'action', data: d });
+                        gameRef.update({ lastAction: { type: 'action', data: d } });
                     } else if (!s.val()) {
+                        // إذا كان كرت رقم، ينتظر اللاعب الآخر
                         gameRef.child('flippedIndices').child(index).set(true);
                         gameRef.child('p' + myPlayerNum + 'Card').set(d);
                     }
@@ -193,18 +217,20 @@
             modalText.innerHTML = `<div style="font-size:80px">${obj.data.i}</div><div style="font-size:24px; font-weight:bold;">${obj.data.t}</div>`;
         } else {
             modalHeader.innerText = "نتيجة المواجهة";
-            const cardHtml = (c, isW) => `<div class="mini-card ${isW?'winner-tag':''}" style="color:${(c.s==='♥'||c.s==='♦')?'red':'black'}"><div>${c.v}</div><div>${c.s}</div></div>`;
-            modalText.innerHTML = `<div class="battle-container">
-                <div>${cardHtml(obj.c1, obj.winner.v===obj.c1.v&&obj.winner.s===obj.c1.s)}<div style="font-size:10px">لاعب 1</div></div>
-                <div style="font-weight:bold; color:red">VS</div>
-                <div>${cardHtml(obj.c2, obj.winner.v===obj.c2.v&&obj.winner.s===obj.c2.s)}<div style="font-size:10px">لاعب 2</div></div>
-            </div><div style="color:#4CAF50; font-weight:bold; font-size:18px">${obj.winner.v} يربح!</div>`;
+            const cardHtml = (c) => `<div class="mini-card" style="color:${(c.s==='♥'||c.s==='♦')?'red':'black'}"><div>${c.v}</div><div>${c.s}</div></div>`;
+            
+            modalText.innerHTML = `
+                <div class="battle-container">
+                    <div>${cardHtml(obj.c1)}<div style="font-size:10px">لاعب 1</div></div>
+                    <div style="font-weight:bold; color:red">VS</div>
+                    <div>${cardHtml(obj.c2)}<div style="font-size:10px">لاعب 2</div></div>
+                </div>
+                <div style="color:#4CAF50; font-weight:bold; font-size:20px">${obj.winnerName}</div>`;
         }
         overlay.style.display = 'flex';
     }
 
     function requestCloseModal() {
-        // تصفير قسري للجولة
         gameRef.update({
             lastAction: null,
             p1Card: null,
@@ -213,7 +239,7 @@
     }
 
     function resetGame() {
-        if(confirm("إعادة خلط الكروت؟")) createSharedDeck(currentMode);
+        if(confirm("إعادة خلط جميع الكروت؟")) createSharedDeck(currentMode);
     }
 </script>
 </body>
