@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>كوتشينة الأوامر - غرف خاصة</title>
+    <title>كوتشينة الأوامر - النسخة الاحترافية</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     
@@ -11,14 +11,14 @@
         :root { --bg-color: #1a0f1a; --card-back: #4a0e0e; --accent: #ffd700; }
         body { background-color: var(--bg-color); margin: 0; padding: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; user-select: none; -webkit-user-select: none; font-family: sans-serif; color: white; overflow-x: hidden; }
         
-        /* شاشة الدخول */
-        #setup-screen { position: fixed; inset: 0; background: var(--bg-color); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; text-align: center; }
-        .room-input { padding: 15px; border-radius: 10px; border: 2px solid #4a0e0e; background: #2d1b2d; color: white; font-size: 1.1rem; width: 250px; text-align: center; margin-bottom: 10px; }
+        /* شاشة تسجيل الدخول */
+        #setup-screen { position: fixed; inset: 0; background: var(--bg-color); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; }
+        .room-input { padding: 15px; border-radius: 10px; border: 2px solid #4a0e0e; background: #2d1b2d; color: white; font-size: 1.1rem; width: 250px; text-align: center; }
         
         .controls { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 15px; position: sticky; top: 0; z-index: 2000; background: rgba(26, 15, 26, 0.95); padding: 10px 0; border-bottom: 1px solid #333; }
         
         .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
-        .btn-player { background: #008cff; font-size: 1.1rem; width: 250px; box-shadow: 0 4px #005fa3; margin: 5px; }
+        .btn-player { background: #008cff; font-size: 1.1rem; width: 250px; box-shadow: 0 4px #005fa3; }
         .btn-reset { background: #ff4444; box-shadow: 0 4px #b32d2d; }
         .mode-online { background: #008cff; box-shadow: 0 4px #005fa3; }
         .mode-offline { background: #ff00ea; box-shadow: 0 4px #a30095; }
@@ -45,11 +45,10 @@
 <body>
 
 <div id="setup-screen">
-    <h2 style="color:var(--accent)">كوتشينة الأوامر</h2>
-    <input type="text" id="room-id" class="room-input" placeholder="أدخل كود الغرفة">
-    <button class="btn btn-player" onclick="joinRoom(1)">أنا اللاعب 1 (إنشاء)</button>
-    <button class="btn btn-player" style="background: #ff00ea; box-shadow: 0 4px #a30095;" onclick="joinRoom(2)">أنا اللاعب 2 (انضمام)</button>
-    <p style="font-size: 12px; color: #777;">شارك الكود مع الطرف الآخر للعب معاً</p>
+    <h2 style="color:var(--accent)">كوتشينة الأوامر المشتركة</h2>
+    <input type="text" id="room-id" class="room-input" placeholder="اكتب كود الغرفة هنا...">
+    <button class="btn btn-player" onclick="joinRoom(1)">أنا اللاعب 1</button>
+    <button class="btn btn-player" style="background: #ff00ea; box-shadow: 0 4px #a30095;" onclick="joinRoom(2)">أنا اللاعب 2</button>
 </div>
 
 <div class="player-indicator" id="p-label">بانتظار الدخول...</div>
@@ -96,20 +95,17 @@
 
     function joinRoom(num) {
         const roomId = document.getElementById('room-id').value.trim();
-        if (!roomId) {
-            alert("يرجى إدخال كود الغرفة أولاً!");
-            return;
-        }
+        if (!roomId) { alert("أدخل كود الغرفة أولاً!"); return; }
+        
         myPlayerNum = num;
         gameRef = db.ref('rooms/' + roomId);
-        
-        document.getElementById('p-label').innerText = "الغرفة: " + roomId + " | لاعب " + num;
+        document.getElementById('p-label').innerText = "غرفة: " + roomId + " | لاعب " + num;
         document.getElementById('setup-screen').style.display = 'none';
         
-        initGame();
+        startListening();
     }
 
-    function initGame() {
+    function startListening() {
         gameRef.on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) {
@@ -127,11 +123,8 @@
             const statusEl = document.getElementById('battle-status');
             
             if (data.p1Card && data.p2Card && !data.lastAction) {
-                let winnerTxt = "";
-                if (data.p1Card.weight > data.p2Card.weight) winnerTxt = "اللاعب 1 فاز!";
-                else if (data.p2Card.weight > data.p1Card.weight) winnerTxt = "اللاعب 2 فاز!";
-                else winnerTxt = "تعادل!";
-
+                let winnerTxt = data.p1Card.weight > data.p2Card.weight ? "اللاعب 1 فاز!" : 
+                               (data.p2Card.weight > data.p1Card.weight ? "اللاعب 2 فاز!" : "تعادل!");
                 gameRef.update({ lastAction: { type: 'battle', c1: data.p1Card, c2: data.p2Card, winnerName: winnerTxt } });
             }
 
@@ -140,16 +133,11 @@
                 statusEl.innerText = "";
             } else {
                 document.getElementById('overlay').style.display = 'none';
-                if (data.p1Card && !data.p2Card) statusEl.innerText = "لاعب 1 اختار.. بانتظار لاعب 2";
-                else if (!data.p1Card && data.p2Card) statusEl.innerText = "لاعب 2 اختار.. بانتظار لاعب 1";
+                if (data.p1Card && !data.p2Card) statusEl.innerText = "لقد اخترت.. بانتظار الخصم";
+                else if (!data.p1Card && data.p2Card) statusEl.innerText = "الخصم اختار.. دورك الآن";
                 else statusEl.innerText = "اختر كرت للمواجهة أو كرت أمر";
             }
         });
-    }
-
-    function toggleMode() {
-        const next = (currentMode === 'online') ? 'offline' : 'online';
-        if(confirm(`تغيير المود إلى ${next}؟`)) createSharedDeck(next);
     }
 
     function createSharedDeck(modeToSet = 'online') {
@@ -166,7 +154,6 @@
             const j = Math.floor(Math.random() * (i + 1));
             [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
         }
-        
         gameRef.set({ deck: newDeck, flippedIndices: {}, lastAction: null, p1Card: null, p2Card: null, mode: modeToSet });
     }
 
@@ -177,10 +164,7 @@
             const isFlipped = flippedIndices && flippedIndices[index];
             const div = document.createElement('div');
             div.className = 'card';
-            
-            let frontClass = "card-front ";
-            if (d.type === 'a') frontClass += "action-card";
-            else if (d.s === '♥' || d.s === '♦') frontClass += "red";
+            let frontClass = "card-front " + (d.type === 'a' ? "action-card" : ((d.s === '♥' || d.s === '♦') ? "red" : ""));
 
             div.innerHTML = `<div class="card-inner ${isFlipped?'flipped':''}">
                                 <div class="card-back"></div>
@@ -191,13 +175,22 @@
             
             div.onpointerdown = () => {
                 if (isFlipped || !myPlayerNum) return;
-                gameRef.child('p' + myPlayerNum + 'Card').once('value', (s) => {
+
+                gameRef.once('value', (snap) => {
+                    const data = snap.val();
+                    const myCardKey = 'p' + myPlayerNum + 'Card';
+
                     if (d.type === 'a') {
                         gameRef.child('flippedIndices').child(index).set(true);
                         gameRef.update({ lastAction: { type: 'action', data: d } });
-                    } else if (!s.val()) {
+                    } else {
+                        // منع اللعب مرتين
+                        if (data[myCardKey]) {
+                            alert("لقد اخترت كرتك بالفعل، انتظر الطرف الآخر!");
+                            return;
+                        }
                         gameRef.child('flippedIndices').child(index).set(true);
-                        gameRef.child('p' + myPlayerNum + 'Card').set(d);
+                        gameRef.child(myCardKey).set(d);
                     }
                 });
             };
@@ -230,8 +223,13 @@
         gameRef.update({ lastAction: null, p1Card: null, p2Card: null });
     }
 
+    function toggleMode() {
+        const next = (currentMode === 'online') ? 'offline' : 'online';
+        if(confirm(`تغيير المود إلى ${next}؟`)) createSharedDeck(next);
+    }
+
     function resetGame() {
-        if(confirm("إعادة خلط جميع الكروت؟")) createSharedDeck(currentMode);
+        if(confirm("إعادة خلط الكروت بالكامل؟")) createSharedDeck(currentMode);
     }
 </script>
 </body>
