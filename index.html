@@ -3,26 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>كوتشينة الأوامر - النسخة الاحترافية</title>
+    <title>كوتشينة الأوامر - النسخة النهائية</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     
     <style>
         :root { --bg-color: #1a0f1a; --card-back: #4a0e0e; --accent: #ffd700; }
         body { background-color: var(--bg-color); margin: 0; padding: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; user-select: none; -webkit-user-select: none; font-family: sans-serif; color: white; overflow-x: hidden; }
-        
-        /* شاشة تسجيل الدخول */
         #setup-screen { position: fixed; inset: 0; background: var(--bg-color); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; }
         .room-input { padding: 15px; border-radius: 10px; border: 2px solid #4a0e0e; background: #2d1b2d; color: white; font-size: 1.1rem; width: 250px; text-align: center; }
-        
         .controls { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 15px; position: sticky; top: 0; z-index: 2000; background: rgba(26, 15, 26, 0.95); padding: 10px 0; border-bottom: 1px solid #333; }
-        
         .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
         .btn-player { background: #008cff; font-size: 1.1rem; width: 250px; box-shadow: 0 4px #005fa3; }
         .btn-reset { background: #ff4444; box-shadow: 0 4px #b32d2d; }
         .mode-online { background: #008cff; box-shadow: 0 4px #005fa3; }
         .mode-offline { background: #ff00ea; box-shadow: 0 4px #a30095; }
-
         .card { width: calc(25% - 8px); aspect-ratio: 2 / 3; perspective: 1000px; }
         @media (max-width: 480px) { .card { width: calc(33.33% - 8px); } }
         .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
@@ -32,12 +27,10 @@
         .card-front { background: white; transform: rotateY(180deg); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #000; font-weight: bold; font-size: 1.2rem; }
         .action-card { background: linear-gradient(135deg, #6a0dad, #b026ff) !important; color: white !important; border: 2px solid var(--accent); }
         .red { color: #ff4444 !important; }
-
         #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4000; justify-content: center; align-items: center; }
         .modal-content { width: 85%; max-width: 350px; background: white; border-radius: 25px; padding: 25px; color: #000; text-align: center; position: relative; }
         .battle-container { display: flex; gap: 15px; align-items: center; justify-content: center; margin: 20px 0; }
         .mini-card { width: 80px; height: 110px; border: 2px solid #ddd; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 22px; background: #fdfdfd; }
-        
         .close-btn { position: absolute; bottom: -80px; left: 50%; transform: translateX(-50%); background: #ff4444; color: white; width: 65px; height: 65px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 32px; cursor: pointer; border: 4px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .player-indicator { position: fixed; top: 12px; left: 12px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 6px; font-size: 12px; z-index: 2500; }
     </style>
@@ -45,8 +38,8 @@
 <body>
 
 <div id="setup-screen">
-    <h2 style="color:var(--accent)">كوتشينة الأوامر المشتركة</h2>
-    <input type="text" id="room-id" class="room-input" placeholder="اكتب كود الغرفة هنا...">
+    <h2 style="color:var(--accent)">كوتشينة الأوامر - نظام الغرف</h2>
+    <input type="text" id="room-id" class="room-input" placeholder="ادخل كود الغرفة">
     <button class="btn btn-player" onclick="joinRoom(1)">أنا اللاعب 1</button>
     <button class="btn btn-player" style="background: #ff00ea; box-shadow: 0 4px #a30095;" onclick="joinRoom(2)">أنا اللاعب 2</button>
 </div>
@@ -72,7 +65,6 @@
 </div>
 
 <script>
-    // تكوين Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyAvUWVPzOphulv9Ejh-dWPdxQKijAkJH_w",
         authDomain: "cardsgame-cf381.firebaseapp.com",
@@ -95,36 +87,27 @@
 
     function joinRoom(num) {
         const roomId = document.getElementById('room-id').value.trim();
-        if (!roomId) { alert("أدخل كود الغرفة أولاً!"); return; }
-        
+        if (!roomId) return alert("ادخل الكود");
         myPlayerNum = num;
         gameRef = db.ref('rooms/' + roomId);
         document.getElementById('p-label').innerText = "غرفة: " + roomId + " | لاعب " + num;
         document.getElementById('setup-screen').style.display = 'none';
         
-        startListening();
-    }
-
-    function startListening() {
         gameRef.on('value', (snapshot) => {
             const data = snapshot.val();
-            if (!data) {
-                if(myPlayerNum === 1) createSharedDeck('online');
-                return;
-            }
+            if (!data) { if(myPlayerNum === 1) createSharedDeck('online'); return; }
             
             currentMode = data.mode || 'online';
-            const modeBtn = document.getElementById('modeBtn');
-            modeBtn.innerText = currentMode === 'online' ? 'المود: أونلاين' : 'المود: أوفلاين';
-            modeBtn.className = `btn mode-${currentMode}`;
+            document.getElementById('modeBtn').innerText = currentMode === 'online' ? 'المود: أونلاين' : 'المود: أوفلاين';
+            document.getElementById('modeBtn').className = `btn mode-${currentMode}`;
 
             renderBoard(data.flippedIndices, data.deck);
 
             const statusEl = document.getElementById('battle-status');
             
+            // منطق المقارنة التلقائي عند اكتمال الكرتين
             if (data.p1Card && data.p2Card && !data.lastAction) {
-                let winnerTxt = data.p1Card.weight > data.p2Card.weight ? "اللاعب 1 فاز!" : 
-                               (data.p2Card.weight > data.p1Card.weight ? "اللاعب 2 فاز!" : "تعادل!");
+                let winnerTxt = data.p1Card.weight > data.p2Card.weight ? "اللاعب 1 فاز!" : (data.p2Card.weight > data.p1Card.weight ? "اللاعب 2 فاز!" : "تعادل!");
                 gameRef.update({ lastAction: { type: 'battle', c1: data.p1Card, c2: data.p2Card, winnerName: winnerTxt } });
             }
 
@@ -133,28 +116,20 @@
                 statusEl.innerText = "";
             } else {
                 document.getElementById('overlay').style.display = 'none';
-                if (data.p1Card && !data.p2Card) statusEl.innerText = "لقد اخترت.. بانتظار الخصم";
-                else if (!data.p1Card && data.p2Card) statusEl.innerText = "الخصم اختار.. دورك الآن";
+                if (data.p1Card && !data.p2Card) statusEl.innerText = myPlayerNum === 1 ? "بانتظار الخصم..." : "الخصم اختار.. دورك!";
+                else if (!data.p1Card && data.p2Card) statusEl.innerText = myPlayerNum === 2 ? "بانتظار الخصم..." : "الخصم اختار.. دورك!";
                 else statusEl.innerText = "اختر كرت للمواجهة أو كرت أمر";
             }
         });
     }
 
-    function createSharedDeck(modeToSet = 'online') {
-        let newDeck = [];
-        ['♠','♣','♥','♦'].forEach(s => {
-            ['A','2','3','4','5','6','7','8','9','10','J','Q','K'].forEach(v => {
-                newDeck.push({type:'n', s, v, weight: valuesOrder[v]});
-            });
-        });
+    function createSharedDeck(modeToSet) {
+        let deck = [];
+        ['♠','♣','♥','♦'].forEach(s => ['A','2','3','4','5','6','7','8','9','10','J','Q','K'].forEach(v => deck.push({type:'n', s, v, weight: valuesOrder[v]})));
         const acts = (modeToSet === 'online') ? onlineActions : offlineActions;
-        [...acts, ...acts].forEach(a => newDeck.push({type:'a', t:a.t, i:a.i}));
-        
-        for (let i = newDeck.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
-        }
-        gameRef.set({ deck: newDeck, flippedIndices: {}, lastAction: null, p1Card: null, p2Card: null, mode: modeToSet });
+        [...acts, ...acts].forEach(a => deck.push({type:'a', t:a.t, i:a.i}));
+        deck.sort(() => Math.random() - 0.5);
+        gameRef.set({ deck, flippedIndices: {}, lastAction: null, p1Card: null, p2Card: null, mode: modeToSet });
     }
 
     function renderBoard(flippedIndices, deck) {
@@ -164,33 +139,28 @@
             const isFlipped = flippedIndices && flippedIndices[index];
             const div = document.createElement('div');
             div.className = 'card';
-            let frontClass = "card-front " + (d.type === 'a' ? "action-card" : ((d.s === '♥' || d.s === '♦') ? "red" : ""));
-
+            let fClass = "card-front " + (d.type === 'a' ? "action-card" : ((d.s === '♥' || d.s === '♦') ? "red" : ""));
             div.innerHTML = `<div class="card-inner ${isFlipped?'flipped':''}">
-                                <div class="card-back"></div>
-                                <div class="${frontClass}">
-                                    ${d.type==='n' ? `<div>${d.v}</div><div>${d.s}</div>` : `<div>${d.i}</div><div style="font-size:10px">${d.t}</div>`}
-                                </div>
-                             </div>`;
+                <div class="card-back"></div>
+                <div class="${fClass}">${d.type==='n' ? `<div>${d.v}</div><div>${d.s}</div>` : `<div>${d.i}</div><div style="font-size:10px">${d.t}</div>`}</div>
+            </div>`;
             
             div.onpointerdown = () => {
-                if (isFlipped || !myPlayerNum) return;
-
-                gameRef.once('value', (snap) => {
-                    const data = snap.val();
-                    const myCardKey = 'p' + myPlayerNum + 'Card';
-
+                if (isFlipped) return;
+                gameRef.once('value', (s) => {
+                    const data = s.val();
                     if (d.type === 'a') {
-                        gameRef.child('flippedIndices').child(index).set(true);
-                        gameRef.update({ lastAction: { type: 'action', data: d } });
+                        // عند اختيار كرت أمر، نصفر كروت المواجهة فوراً لتجنب التداخل
+                        gameRef.update({ 
+                            [`flippedIndices/${index}`]: true,
+                            lastAction: { type: 'action', data: d },
+                            p1Card: null,
+                            p2Card: null
+                        });
                     } else {
-                        // منع اللعب مرتين
-                        if (data[myCardKey]) {
-                            alert("لقد اخترت كرتك بالفعل، انتظر الطرف الآخر!");
-                            return;
-                        }
-                        gameRef.child('flippedIndices').child(index).set(true);
-                        gameRef.child(myCardKey).set(d);
+                        const myKey = 'p' + myPlayerNum + 'Card';
+                        if (data[myKey]) return alert("انتظر الخصم!");
+                        gameRef.update({ [`flippedIndices/${index}`]: true, [myKey]: d });
                     }
                 });
             };
@@ -201,22 +171,16 @@
     function showModal(obj) {
         const modalText = document.getElementById('modal-text');
         const modalHeader = document.getElementById('modal-header');
-        const overlay = document.getElementById('overlay');
-        
         if (obj.type === 'action') {
             modalHeader.innerText = "أمر عشوائي";
             modalText.innerHTML = `<div style="font-size:80px">${obj.data.i}</div><div style="font-size:24px; font-weight:bold;">${obj.data.t}</div>`;
         } else {
             modalHeader.innerText = "نتيجة المواجهة";
-            const cardHtml = (c) => `<div class="mini-card" style="color:${(c.s==='♥'||c.s==='♦')?'red':'black'}"><div>${c.v}</div><div>${c.s}</div></div>`;
-            modalText.innerHTML = `<div class="battle-container">
-                    <div>${cardHtml(obj.c1)}<div style="font-size:10px">لاعب 1</div></div>
-                    <div style="font-weight:bold; color:red">VS</div>
-                    <div>${cardHtml(obj.c2)}<div style="font-size:10px">لاعب 2</div></div>
-                </div>
+            const cardH = (c) => `<div class="mini-card" style="color:${(c.s==='♥'||c.s==='♦')?'red':'black'}"><div>${c.v}</div><div>${c.s}</div></div>`;
+            modalText.innerHTML = `<div class="battle-container"><div>${cardH(obj.c1)}<div>لاعب 1</div></div><div style="color:red">VS</div><div>${cardH(obj.c2)}<div>لاعب 2</div></div></div>
                 <div style="color:#4CAF50; font-weight:bold; font-size:20px">${obj.winnerName}</div>`;
         }
-        overlay.style.display = 'flex';
+        document.getElementById('overlay').style.display = 'flex';
     }
 
     function requestCloseModal() {
@@ -224,12 +188,11 @@
     }
 
     function toggleMode() {
-        const next = (currentMode === 'online') ? 'offline' : 'online';
-        if(confirm(`تغيير المود إلى ${next}؟`)) createSharedDeck(next);
+        if(confirm("تغيير المود؟")) createSharedDeck(currentMode === 'online' ? 'offline' : 'online');
     }
 
     function resetGame() {
-        if(confirm("إعادة خلط الكروت بالكامل؟")) createSharedDeck(currentMode);
+        if(confirm("إعادة الضبط؟")) createSharedDeck(currentMode);
     }
 </script>
 </body>
